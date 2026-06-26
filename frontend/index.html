@@ -1,0 +1,128 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>Saathi</title>
+<style>
+  body {
+    font-family: -apple-system, sans-serif;
+    background: #1a1a2e;
+    color: #f0f0f0;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    height: 100vh;
+    margin: 0;
+    text-align: center;
+  }
+  h1 { font-size: 2.5rem; margin-bottom: 0.2rem; }
+  p.subtitle { color: #a0a0c0; margin-top: 0; }
+  #mic-button {
+    width: 140px;
+    height: 140px;
+    border-radius: 50%;
+    border: none;
+    background: #e94560;
+    color: white;
+    font-size: 1.1rem;
+    cursor: pointer;
+    margin: 2rem;
+    transition: transform 0.2s, background 0.2s;
+  }
+  #mic-button.listening {
+    background: #16c79a;
+    transform: scale(1.1);
+  }
+  #transcript, #response {
+    max-width: 600px;
+    margin: 0.5rem auto;
+    padding: 1rem;
+    border-radius: 12px;
+    min-height: 1.5rem;
+  }
+  #transcript { background: #25254a; color: #c0c0e0; }
+  #response { background: #0f3460; color: #f0f0f0; font-size: 1.2rem; }
+</style>
+</head>
+<body>
+  <h1>🪷 Saathi</h1>
+  <p class="subtitle">Tap and speak. I'm listening.</p>
+  <button id="mic-button">🎤 Tap to talk</button>
+  <div id="transcript">You said: ...</div>
+  <div id="response">Saathi: ...</div>
+
+<script>
+// NOTE: This is a demo-grade frontend wired to a local agent backend.
+// Replace ORCHESTRATOR_ENDPOINT with your deployed Cloud Run URL.
+const ORCHESTRATOR_ENDPOINT = "http://localhost:8001/chat"; // wrap orchestrator.py with a small FastAPI endpoint
+const USER_ID = "demo_user";
+
+const micButton = document.getElementById("mic-button");
+const transcriptEl = document.getElementById("transcript");
+const responseEl = document.getElementById("response");
+
+const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
+const recognition = SpeechRecognition ? new SpeechRecognition() : null;
+
+if (recognition) {
+  recognition.continuous = false;
+  recognition.interimResults = false;
+  recognition.lang = "en-IN";
+}
+
+function speak(text) {
+  const utterance = new SpeechSynthesisUtterance(text);
+  utterance.rate = 0.95;
+  window.speechSynthesis.speak(utterance);
+}
+
+async function sendToAgent(text) {
+  responseEl.textContent = "Saathi: thinking...";
+  try {
+    const res = await fetch(ORCHESTRATOR_ENDPOINT, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ user_id: USER_ID, message: text }),
+    });
+    const data = await res.json();
+    responseEl.textContent = "Saathi: " + data.response;
+    speak(data.response);
+  } catch (err) {
+    const fallback = "I couldn't reach the server. Please check the connection.";
+    responseEl.textContent = "Saathi: " + fallback;
+    speak(fallback);
+  }
+}
+
+micButton.addEventListener("click", () => {
+  if (!recognition) {
+    alert("Voice recognition isn't supported in this browser. Try Chrome.");
+    return;
+  }
+  micButton.classList.add("listening");
+  micButton.textContent = "🎙️ Listening...";
+  recognition.start();
+});
+
+if (recognition) {
+  recognition.onresult = (event) => {
+    const said = event.results[0][0].transcript;
+    transcriptEl.textContent = "You said: " + said;
+    sendToAgent(said);
+  };
+
+  recognition.onend = () => {
+    micButton.classList.remove("listening");
+    micButton.textContent = "🎤 Tap to talk";
+  };
+
+  recognition.onerror = () => {
+    micButton.classList.remove("listening");
+    micButton.textContent = "🎤 Tap to talk";
+    transcriptEl.textContent = "Didn't catch that — try again.";
+  };
+}
+</script>
+</body>
+</html>
