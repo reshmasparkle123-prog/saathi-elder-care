@@ -1,76 +1,31 @@
-"""
-chat_api.py — Thin FastAPI wrapper so the voice frontend can POST to the
-orchestrator over HTTP. Keeps the agent runtime decoupled from the web layer.
-
-Run alongside mcp_server/server.py:
-    python agents/chat_api.py
-"""
-
-import sys
-from pathlib import Path
-
-sys.path.append(str(Path(__file__).parent))
-
-from fastapi import FastAPI
+import os,time,hashlib
+from dotenv import load_dotenv
+load_dotenv()
+from fastapi import FastAPI,HTTPException
 from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel
-from orchestrator import orchestrator
-from google.adk.runners import Runner
-from google.adk.sessions import InMemorySessionService
-from google.genai import types
-
-app = FastAPI(title="Saathi Chat API")
-
-app.add_middleware(
-    CORSMiddleware,
-    allow_origins=["*"],
-    allow_methods=["POST"],
-    allow_headers=["*"],
-)
-
-APP_NAME = "saathi"
-session_service = InMemorySessionService()
-runner = Runner(agent=orchestrator, app_name=APP_NAME, session_service=session_service)
-
-
+from groq import Groq
+app=FastAPI()
+app.add_middleware(CORSMiddleware,allow_origins=["*"],allow_methods=["POST"],allow_headers=["*"])
+client=Groq(api_key=os.environ.get("GROQ_API_KEY"))
+SYSTEM="You are Saathi, warm AI elder care companion. Speak Hinglish. 2-3 sentences max."
+_cache={}
 class ChatRequest(BaseModel):
-    user_id: str
-    message: str
-
-
+ user_id:str
+ message:str
+def _h(t): return hashlib.md5(t.strip().lower().encode()).hexdigest()
 @app.post("/chat")
-async def chat(req: ChatRequest):
-    session_id = f"session_{req.user_id}"
-
-    try:
-        await session_service.create_session(
-            app_name=APP_NAME, user_id=req.user_id, session_id=session_id
-        )
-    except Exception:
-        pass
-
-    content = types.Content(role="user", parts=[types.Part(text=req.message)])
-
-    response_text = ""
-    async for event in runner.run_async(
-        user_id=req.user_id, session_id=session_id, new_message=content
-    ):
-        if event.content and event.content.parts:
-            for part in event.content.parts:
-                if getattr(part, "text", None):
-                    response_text += part.text
-
-    return {"response": response_text}
-
-
+async def chat(req:ChatRequest):
+ k=_h(req.message)
+ if k in _cache and time.time()-_cache[k][1]<3600: return {"response":_cache[k][0]}
+ try:
+  c=client.chat.completions.create(model="llama-3.3-70b-versatile",messages=[{"role":"system","content":SYSTEM},{"role":"user","content":req.message}],max_tokens=200)
+  r=c.choices[0].message.content.strip()
+  _cache[k]=(r,time.time())
+  return {"response":r}
+ except Exception as e: raise HTTPException(status_code=500,detail=str(e))
 @app.get("/health")
-def health():
-    return {"status": "ok"}
-
-
-if __name__ == "__main__":
-    import uvicorn
-    import os
-
-    port = int(os.environ.get("PORT", 8001))
-    uvicorn.run(app, host="0.0.0.0", port=port)
+def health(): return {"status":"ok"}
+if __name__=="__main__":
+ import uvicorn
+ uvicorn.run(app,host="0.0.0.0",port=int(os.environ.get("PORT",8001)))
