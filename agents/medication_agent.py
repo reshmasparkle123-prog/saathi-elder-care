@@ -74,7 +74,7 @@ def flag_out_of_scope_tool(user_id: str, query: str) -> dict:
 
 medication_agent = Agent(
     name="medication_reminder_agent",
-    model="gemini-2.0-flash",
+    model="gemini-1.5-flash",
     description="Tracks and reminds about medication schedule; never gives medical advice.",
     instruction=SYSTEM_PROMPT,
     tools=[get_schedule_tool, confirm_dose_tool, flag_out_of_scope_tool],
