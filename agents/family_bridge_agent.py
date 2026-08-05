@@ -77,7 +77,7 @@ def notify_family_tool(user_id: str, summary: str) -> dict:
 
 family_bridge_agent = Agent(
     name="family_bridge_agent",
-    model="gemini-2.0-flash",
+    model="gemini-1.5-flash",
     description="Detects concerning activity patterns and escalates to family — never resolves issues itself.",
     instruction=SYSTEM_PROMPT,
     tools=[get_activity_tool, notify_family_tool],

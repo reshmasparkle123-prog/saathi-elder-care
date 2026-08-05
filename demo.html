@@ -1,0 +1,143 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="UTF-8">
+<title>Saathi - Elder Care AI</title>
+<style>
+  body { background:#0f1024; color:#e8e8f5; font-family:Arial,sans-serif; margin:0; padding:40px; }
+  .wrap { max-width:700px; margin:0 auto; text-align:center; }
+  h1 { color:#a78bfa; font-size:48px; margin-bottom:0; }
+  .sub { color:#9ca3af; margin-top:4px; }
+  .chatbox { background:#1e1f3b; border-radius:12px; padding:24px; margin-top:24px; min-height:150px; text-align:left; font-size:18px; }
+  .row { display:flex; gap:8px; margin-top:16px; }
+  input[type=text] { flex:1; padding:14px; border-radius:8px; border:none; background:#2a2b4d; color:#fff; font-size:16px; }
+  button { padding:14px 24px; border-radius:8px; border:none; background:#7c3aed; color:#fff; font-size:16px; cursor:pointer; }
+  button:hover { background:#6d28d9; }
+  .mic { background:#2563eb; }
+  .mic.listening { background:#dc2626; }
+  .panels { display:flex; gap:16px; margin-top:24px; text-align:left; }
+  .panel { flex:1; background:#1e1f3b; border-radius:12px; padding:16px; }
+  .panel h3 { margin-top:0; color:#a78bfa; font-size:16px; }
+  .panel ul { list-style:none; padding:0; margin:0; font-size:14px; color:#cbd5e1; }
+  .panel li { padding:8px 0; border-bottom:1px solid #2a2b4d; }
+  .panel li:last-child { border-bottom:none; }
+  .empty { color:#6b7280; font-style:italic; }
+</style>
+</head>
+<body>
+<div class="wrap">
+  <h1>Saathi</h1>
+  <div class="sub">Your AI Elder Care Companion</div>
+
+  <div class="chatbox" id="chatbox">Namaste! Aap kaise ho? Main aapki kaise madad kar sakta hoon?</div>
+
+  <div class="row">
+    <input type="text" id="msgInput" placeholder="Type your message...">
+    <button class="mic" id="micBtn" onclick="toggleVoice()">🎤</button>
+    <button onclick="sendMessage()">Send</button>
+  </div>
+
+  <div class="panels">
+    <div class="panel">
+      <h3>💊 Reminders</h3>
+      <ul id="remindersList"><li class="empty">None yet</li></ul>
+    </div>
+    <div class="panel">
+      <h3>👨‍👩‍👧 Family Updates</h3>
+      <ul id="familyList"><li class="empty">None yet</li></ul>
+    </div>
+  </div>
+</div>
+
+<script>
+const USER_ID = "demo";
+const API = "http://localhost:8001";
+const chatbox = document.getElementById("chatbox");
+const msgInput = document.getElementById("msgInput");
+
+msgInput.addEventListener("keypress", e => { if (e.key === "Enter") sendMessage(); });
+
+async function sendMessage() {
+  const msg = msgInput.value.trim();
+  if (!msg) return;
+  chatbox.innerText = "...";
+  msgInput.value = "";
+  try {
+    const res = await fetch(`${API}/chat`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ user_id: USER_ID, message: msg })
+    });
+    if (!res.ok) throw new Error("Server error");
+    const data = await res.json();
+    chatbox.innerText = data.response;
+    speak(data.response);
+    refreshPanels();
+  } catch (err) {
+    chatbox.innerText = "Connection error. Please check the server is running and try again.";
+  }
+}
+
+async function refreshPanels() {
+  try {
+    const r = await fetch(`${API}/reminders/${USER_ID}`);
+    const reminders = await r.json();
+    const rl = document.getElementById("remindersList");
+    rl.innerHTML = reminders.length
+      ? reminders.map(x => `<li>💊 ${x.medicine} — ${x.time}</li>`).join("")
+      : '<li class="empty">None yet</li>';
+
+    const f = await fetch(`${API}/family-updates/${USER_ID}`);
+    const updates = await f.json();
+    const fl = document.getElementById("familyList");
+    fl.innerHTML = updates.length
+      ? updates.map(x => `<li>💬 ${x.message}</li>`).join("")
+      : '<li class="empty">None yet</li>';
+  } catch (err) {
+    console.error("Could not refresh panels", err);
+  }
+}
+
+function speak(text) {
+  if (!("speechSynthesis" in window)) return;
+  const utter = new SpeechSynthesisUtterance(text);
+  utter.rate = 0.95;
+  speechSynthesis.speak(utter);
+}
+
+let recognition;
+let listening = false;
+
+function toggleVoice() {
+  const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
+  if (!SpeechRecognition) {
+    alert("Voice input not supported in this browser. Try Chrome.");
+    return;
+  }
+  const micBtn = document.getElementById("micBtn");
+
+  if (listening) {
+    recognition.stop();
+    return;
+  }
+
+  recognition = new SpeechRecognition();
+  recognition.lang = "hi-IN";
+  recognition.interimResults = false;
+
+  recognition.onstart = () => { listening = true; micBtn.classList.add("listening"); };
+  recognition.onend = () => { listening = false; micBtn.classList.remove("listening"); };
+  recognition.onresult = (event) => {
+    const transcript = event.results[0][0].transcript;
+    msgInput.value = transcript;
+    sendMessage();
+  };
+  recognition.onerror = () => { listening = false; micBtn.classList.remove("listening"); };
+
+  recognition.start();
+}
+
+refreshPanels();
+</script>
+</body>
+</html>

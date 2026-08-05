@@ -63,7 +63,7 @@ def log_checkin_tool(user_id: str, note: str) -> dict:
 
 voice_agent = Agent(
     name="voice_accessibility_agent",
-    model="gemini-2.0-flash",
+    model="gemini-1.5-flash",
     description="Handles voice-first interactions for vision-impaired users, including expense calculation.",
     instruction=SYSTEM_PROMPT,
     tools=[calculate_expense_tool, log_checkin_tool],
