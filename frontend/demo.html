@@ -1,3 +1,5 @@
+cd ~/Downloads/saathi/frontend
+cat > demo.html << 'EOF'
 <!DOCTYPE html>
 <html>
 <head>
@@ -64,11 +66,28 @@ const chatbox = document.getElementById("chatbox");
 const msgInput = document.getElementById("msgInput");
 
 let currentLanguage = "en";
+let availableVoices = [];
 
 const GREETINGS = {
   en: "Hello! How can I help you today?",
   hi: "Namaste! Aap kaise ho? Main aapki kaise madad kar sakta hoon?"
 };
+
+function loadVoices() {
+  availableVoices = speechSynthesis.getVoices();
+}
+loadVoices();
+if (speechSynthesis.onvoiceschanged !== undefined) {
+  speechSynthesis.onvoiceschanged = loadVoices;
+}
+
+function pickVoice(lang) {
+  // Prefer a natural-sounding local voice matching the language
+  const langPrefix = lang === "hi" ? "hi" : "en";
+  let voice = availableVoices.find(v => v.lang.toLowerCase().startsWith(langPrefix) && v.localService);
+  if (!voice) voice = availableVoices.find(v => v.lang.toLowerCase().startsWith(langPrefix));
+  return voice || null;
+}
 
 function setLanguage(lang) {
   currentLanguage = lang;
@@ -124,9 +143,14 @@ async function refreshPanels() {
 
 function speak(text) {
   if (!("speechSynthesis" in window)) return;
+  speechSynthesis.cancel(); // stop any overlapping speech
   const utter = new SpeechSynthesisUtterance(text);
+  const voice = pickVoice(currentLanguage);
+  if (voice) utter.voice = voice;
   utter.lang = currentLanguage === "hi" ? "hi-IN" : "en-US";
-  utter.rate = 0.95;
+  utter.rate = 1.0;
+  utter.pitch = 1.0;
+  utter.volume = 1.0;
   speechSynthesis.speak(utter);
 }
 
@@ -163,6 +187,110 @@ function toggleVoice() {
 }
 
 refreshPanels();
+
+// ---------- Alarm system ----------
+const triggeredToday = new Set();
+
+function parseTimeToMinutes(timeStr) {
+  const cleaned = timeStr.trim().toLowerCase().replace(/\s+/g, "");
+  let match = cleaned.match(/^(\d{1,2}):?(\d{2})?(am|pm)?$/);
+  if (!match) return null;
+
+  let [, hourStr, minStr, ampm] = match;
+  let hour = parseInt(hourStr, 10);
+  let min = minStr ? parseInt(minStr, 10) : 0;
+
+  if (ampm === "pm" && hour !== 12) hour += 12;
+  if (ampm === "am" && hour === 12) hour = 0;
+
+  return hour * 60 + min;
+}
+
+function playAlarmSound() {
+  // Classic two-tone alarm clock pattern (like a phone alarm), 4 rings
+  const ctx = new (window.AudioContext || window.webkitAudioContext)();
+  const toneA = 740; // F#5
+  const toneB = 587; // D5
+  let ring = 0;
+
+  function playTonePair() {
+    [toneA, toneB].forEach((freq, i) => {
+      const osc = ctx.createOscillator();
+      const gain = ctx.createGain();
+      osc.connect(gain);
+      gain.connect(ctx.destination);
+      osc.type = "sine";
+      osc.frequency.value = freq;
+      const startTime = ctx.currentTime + i * 0.22;
+      gain.gain.setValueAtTime(0.0001, startTime);
+      gain.gain.exponentialRampToValueAtTime(0.35, startTime + 0.02);
+      gain.gain.exponentialRampToValueAtTime(0.0001, startTime + 0.2);
+      osc.start(startTime);
+      osc.stop(startTime + 0.22);
+    });
+  }
+
+  const interval = setInterval(() => {
+    playTonePair();
+    ring++;
+    if (ring >= 4) clearInterval(interval);
+  }, 700);
+  playTonePair();
+}
+
+function showAlarmBanner(medicine, time) {
+  const existing = document.getElementById("alarmBanner");
+  if (existing) existing.remove();
+
+  const banner = document.createElement("div");
+  banner.id = "alarmBanner";
+  banner.style.cssText = `
+    position: fixed; top: 20px; left: 50%; transform: translateX(-50%);
+    background: #dc2626; color: white; padding: 20px 32px; border-radius: 12px;
+    font-size: 20px; font-weight: bold; z-index: 9999; box-shadow: 0 4px 20px rgba(0,0,0,0.4);
+    display: flex; align-items: center; gap: 16px;
+  `;
+  banner.innerHTML = `
+    ⏰ Time for: ${medicine} (${time})
+    <button id="dismissAlarm" style="padding:8px 16px; border-radius:6px; border:none; background:white; color:#dc2626; font-weight:bold; cursor:pointer;">Dismiss</button>
+  `;
+  document.body.appendChild(banner);
+
+  document.getElementById("dismissAlarm").onclick = () => banner.remove();
+
+  const msg = currentLanguage === "hi"
+    ? `Samay ho gaya hai. Kripya apni ${medicine} lein.`
+    : `It's time to take your ${medicine}.`;
+  speak(msg);
+}
+
+async function checkAlarms() {
+  try {
+    const r = await fetch(`${API}/reminders/${USER_ID}`);
+    const reminders = await r.json();
+    const now = new Date();
+    const nowMinutes = now.getHours() * 60 + now.getMinutes();
+    const todayKey = now.toDateString();
+
+    reminders.forEach(rem => {
+      const remMinutes = parseTimeToMinutes(rem.time);
+      if (remMinutes === null) return;
+
+      const triggerKey = `${todayKey}-${rem.medicine}-${rem.time}`;
+      if (remMinutes <= nowMinutes && !triggeredToday.has(triggerKey)) {
+        triggeredToday.add(triggerKey);
+        playAlarmSound();
+        showAlarmBanner(rem.medicine, rem.time);
+      }
+    });
+  } catch (err) {
+    console.error("Alarm check failed", err);
+  }
+}
+
+setInterval(checkAlarms, 30000);
+checkAlarms();
 </script>
 </body>
 </html>
+EOF
