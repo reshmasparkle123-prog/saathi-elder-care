@@ -1,3 +1,4 @@
+
 <!DOCTYPE html>
 <html lang="en">
 <head>
@@ -53,9 +54,7 @@
   <div id="response">Saathi: ...</div>
 
 <script>
-// NOTE: This is a demo-grade frontend wired to a local agent backend.
-// Replace ORCHESTRATOR_ENDPOINT with your deployed Cloud Run URL.
-const ORCHESTRATOR_ENDPOINT = "http://localhost:8001/chat"; // wrap orchestrator.py with a small FastAPI endpoint
+const ORCHESTRATOR_ENDPOINT = "http://localhost:8001/chat";
 const USER_ID = "demo_user";
 
 const micButton = document.getElementById("mic-button");
@@ -72,8 +71,8 @@ if (recognition) {
 }
 
 function speak(text) {
-  utterance.lang = "hi-IN";
   const utterance = new SpeechSynthesisUtterance(text);
+  utterance.lang = "hi-IN";
   utterance.rate = 0.8;
   window.speechSynthesis.speak(utterance);
 }
