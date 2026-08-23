@@ -34,3 +34,4 @@ Voice-first multilingual AI concierge for elderly users.
 
 ## Future Scope
 Full voice input/output via Web Speech API, reconnecting to a dedicated MCP server, splitting into distinct ADK-orchestrated agents, encrypted production storage, and scheduled SMS/WhatsApp delivery to family.
+
