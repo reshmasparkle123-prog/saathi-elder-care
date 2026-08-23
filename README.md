@@ -51,3 +51,9 @@ Full voice input/output via Web Speech API, reconnecting to a dedicated MCP serv
 2. Start the backend: `cd backend && python app.py` (runs on port 8001)
 3. Open `frontend/demo.html` in your browser, or serve it: `cd frontend && python -m http.server 3000`
 4. Visit `http://localhost:3000/demo.html`
+
+## API Endpoints
+
+- `POST /chat` — send a message, returns AI response. Body: `{ user_id, message, language }`
+- `GET /reminders/{user_id}` — returns list of reminders for a user
+- `GET /family-updates/{user_id}` — returns list of family update messages for a user
