@@ -1,5 +1,3 @@
-cd ~/Downloads/saathi/frontend
-cat > demo.html << 'EOF'
 <!DOCTYPE html>
 <html>
 <head>
@@ -43,8 +41,8 @@ cat > demo.html << 'EOF'
 
   <div class="row">
     <input type="text" id="msgInput" placeholder="Type your message...">
-    <button class="mic" id="micBtn" onclick="toggleVoice()">🎤</button>
-    <button onclick="sendMessage()">Send</button>
+    <button class="mic" id="micBtn" onclick="toggleVoice()" aria-label="Start voice input">🎤</button>
+    <button onclick="sendMessage()" aria-label="Send message">Send</button>
   </div>
 
   <div class="panels">
@@ -82,7 +80,6 @@ if (speechSynthesis.onvoiceschanged !== undefined) {
 }
 
 function pickVoice(lang) {
-  // Prefer a natural-sounding local voice matching the language
   const langPrefix = lang === "hi" ? "hi" : "en";
   let voice = availableVoices.find(v => v.lang.toLowerCase().startsWith(langPrefix) && v.localService);
   if (!voice) voice = availableVoices.find(v => v.lang.toLowerCase().startsWith(langPrefix));
@@ -141,9 +138,12 @@ async function refreshPanels() {
   }
 }
 
+// Note: cancel() interrupts any in-progress speech, including an active alarm
+// announcement if a chat message is sent while it's playing. Acceptable tradeoff
+// for now since alarms are short, but worth revisiting if it becomes an issue.
 function speak(text) {
-  if (!("speechSynthesis" in window)) return;
-  speechSynthesis.cancel(); // stop any overlapping speech
+  if (!("speechSynthesis" in window) || !text) return;
+  speechSynthesis.cancel();
   const utter = new SpeechSynthesisUtterance(text);
   const voice = pickVoice(currentLanguage);
   if (voice) utter.voice = voice;
@@ -192,6 +192,7 @@ refreshPanels();
 const triggeredToday = new Set();
 
 function parseTimeToMinutes(timeStr) {
+  if (!timeStr || typeof timeStr !== "string") return null;
   const cleaned = timeStr.trim().toLowerCase().replace(/\s+/g, "");
   let match = cleaned.match(/^(\d{1,2}):?(\d{2})?(am|pm)?$/);
   if (!match) return null;
@@ -207,10 +208,9 @@ function parseTimeToMinutes(timeStr) {
 }
 
 function playAlarmSound() {
-  // Classic two-tone alarm clock pattern (like a phone alarm), 4 rings
   const ctx = new (window.AudioContext || window.webkitAudioContext)();
-  const toneA = 740; // F#5
-  const toneB = 587; // D5
+  const toneA = 740;
+  const toneB = 587;
   let ring = 0;
 
   function playTonePair() {
@@ -293,4 +293,3 @@ checkAlarms();
 </script>
 </body>
 </html>
-EOF
