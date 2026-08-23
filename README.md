@@ -44,3 +44,10 @@ Full voice input/output via Web Speech API, reconnecting to a dedicated MCP serv
 
 
 
+
+## Getting Started
+
+1. Clone the repo
+2. Start the backend: `cd backend && python app.py` (runs on port 8001)
+3. Open `frontend/demo.html` in your browser, or serve it: `cd frontend && python -m http.server 3000`
+4. Visit `http://localhost:3000/demo.html`
