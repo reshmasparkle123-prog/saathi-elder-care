@@ -65,6 +65,7 @@ const msgInput = document.getElementById("msgInput");
 
 let currentLanguage = "en";
 let availableVoices = [];
+let isSending = false;
 
 const GREETINGS = {
   en: "Hello! How can I help you today?",
@@ -97,7 +98,8 @@ msgInput.addEventListener("keypress", e => { if (e.key === "Enter") sendMessage(
 
 async function sendMessage() {
   const msg = msgInput.value.trim();
-  if (!msg) return;
+  if (!msg || isSending) return;
+  isSending = true;
   chatbox.innerText = "...";
   msgInput.value = "";
   try {
@@ -115,6 +117,8 @@ async function sendMessage() {
     chatbox.innerText = currentLanguage === "en"
       ? "Connection error. Please check the server is running and try again."
       : "Connection error. Server check kijiye aur dobara try kijiye.";
+  } finally {
+    isSending = false;
   }
 }
 
@@ -138,9 +142,6 @@ async function refreshPanels() {
   }
 }
 
-// Note: cancel() interrupts any in-progress speech, including an active alarm
-// announcement if a chat message is sent while it's playing. Acceptable tradeoff
-// for now since alarms are short, but worth revisiting if it becomes an issue.
 function speak(text) {
   if (!("speechSynthesis" in window) || !text) return;
   speechSynthesis.cancel();
