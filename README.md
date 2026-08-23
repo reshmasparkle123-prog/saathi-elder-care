@@ -28,5 +28,9 @@ cd frontend && python3 -m http.server 3000
 ```
 Open `http://localhost:3000/demo.html` in your browser.
 
+## About
+
+Voice-first multilingual AI concierge for elderly users.
+
 ## Future Scope
 Full voice input/output via Web Speech API, reconnecting to a dedicated MCP server, splitting into distinct ADK-orchestrated agents, encrypted production storage, and scheduled SMS/WhatsApp delivery to family.

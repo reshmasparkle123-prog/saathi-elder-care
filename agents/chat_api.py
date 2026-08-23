@@ -1,4 +1,6 @@
 import os
+from dotenv import load_dotenv
+load_dotenv()
 import json
 import sqlite3
 from pathlib import Path
@@ -123,7 +125,7 @@ async def chat(req: ChatRequest):
             {"role": "user", "content": req.message},
         ]
         completion = client.chat.completions.create(
-            model="llama-3.3-70b-versatile", messages=messages,
+            model="openai/gpt-oss-120b", messages=messages,
             tools=TOOLS, tool_choice="auto",
         )
         msg = completion.choices[0].message
@@ -142,7 +144,7 @@ async def chat(req: ChatRequest):
                     result = "Unknown tool"
                 messages.append({"role": "tool", "tool_call_id": call.id, "content": result})
             followup = client.chat.completions.create(
-                model="llama-3.3-70b-versatile", messages=messages)
+                model="openai/gpt-oss-120b", messages=messages)
             return {"response": followup.choices[0].message.content}
 
         return {"response": msg.content}
