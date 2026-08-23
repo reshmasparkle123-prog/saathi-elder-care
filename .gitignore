@@ -1,12 +1,6 @@
+node_modules/
 __pycache__/
 *.pyc
 .env
-data/*.db
 .DS_Store
-venv/
-__pycache__/
-*.pyc
-.env
-venv/
-.envc
-.envt
+*.log
