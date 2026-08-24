@@ -8,5 +8,5 @@ __pycache__/
 *.pyc
 .env
 venv/
-.envc
+.envc   
 .envt
