@@ -5,7 +5,7 @@ import json
 import sqlite3
 from pathlib import Path
 from fastapi import FastAPI
-from fastapi.middleware.cors import CORSMiddleware
+from fastapi.middleware.cors import CORSMiddleware      
 from pydantic import BaseModel
 from groq import Groq
 
