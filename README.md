@@ -2,7 +2,7 @@
 
 Saathi is a voice-first AI elder care concierge agent designed to help elderly users, particularly those with declining vision or hearing, manage everyday logistics: remembering medications, performing simple tasks without depending on a screen, and staying meaningfully connected to family who cannot always be physically present.
 
-## Tech Stack
+## Tech Stack.  
 - **Backend:** FastAPI
 - **LLM:** Groq LLaMA 3.3-70B (native tool-calling)
 - **Storage:** SQLite (local, demo-scale)
